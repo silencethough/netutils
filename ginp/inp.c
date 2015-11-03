@@ -3,10 +3,6 @@
  *
  * Some of the options of the original ping program aren't included in this
  * piece of code, like the record route option.
- *
- * There must be lots of memory errors in this program, since it's a setuid
- * program, and I don't know how to detect the memory errors in it.
- *
  */
 
 #define _GNU_SOURCE
