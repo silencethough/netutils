@@ -163,7 +163,7 @@ int main(int argc, char *argv[])
 
 	/*
 	 * parsing command line options
-	 * in fact, there are only one available options,
+	 * in fact, there is only one available option,
 	 * the initial time to live option.
 	 */
 	while ((ch = getopt_long(argc, argv, optstring,
