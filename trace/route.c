@@ -624,13 +624,13 @@ void tcpheader(int probe_or_answ)
 		 * the timestamp option is not set here.
 		 */
 		tcp.doff = 5;
-		if (probe_or_answ == 0) {
-			tcp.rst = 1;
-		} else {
+		if (probe_or_answ == 1) {
 			/*
-			 * we use other flag other than SYN
+			 * we use flags other than SYN
 			 */
 			setcpflag(user_flag);
+		} else {
+			tcp.rst = 1;
 		}
 		tcp.window = htons(1460);
 		tcp_totlen = (uint16_t)(tcp_hdrlen + tcp_datalen);
@@ -659,13 +659,17 @@ void sdpacket(int probe_or_answ)
 	memcpy(s_buff, &ip, ip_hdrlen);
 
 	/* test whether this is a probe or answer packet */
-	if (probe_or_answ) {
+	if (probe_or_answ == 1 && user_flag == 4) {
 		tcpoptions();
 		tcpheader(probe);
 		memcpy(s_buff + ip_hdrlen, &tcp, tcp_hdrlen);
 		memcpy(s_buff + ip_hdrlen + tcp_hdrlen, tcp_opt, tcp_optlen);
 	} else {
-		tcpheader(answ);
+		if (probe_or_answ == 1) {
+			tcpheader(probe);
+		} else {
+			tcpheader(answ);
+		}
 		memcpy(s_buff + ip_hdrlen, &tcp, tcp_hdrlen);
 	}
 
