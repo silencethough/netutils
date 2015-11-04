@@ -5,9 +5,9 @@
  * seems that some of the firewalls would filter out udp packets with
  * "bad(unlikely)" ports.
  *
- * Even with tcp sockets, if we tried to use a port which the server had not
- * been listening to, some of the servers would not send us a TCP RST reply, and
- * if we turned on a flag other than the SYN flag while setting ttl to "zero",
+ * Even with tcp sockets, if we tried to connect to a port which the server had
+ * not been listening to, some of the servers would not send us a TCP RST reply,
+ * and if we turned on a flag other than the SYN flag while setting ttl to zero,
  * according to the experiments(by just simply deleting a few lines in the
  * section which entitled "parsing command line options", maybe I did something
  * wrong)I had done, it seemed that the behaviors of routers would be partially
