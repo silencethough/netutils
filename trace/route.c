@@ -12,8 +12,8 @@
  * section which entitled "parsing command line options", maybe I did something
  * wrong)I had done, it seemed that the behaviors of routers would be partially
  * determined by the content of tcp segment(or the tcp flags combined with ttl),
- * all the routers would not send us any ICMP messages indicating the our ttl
- * was exceeded in transit, therefore, I disabled the options which were used
+ * all the routers would not send us any ICMP messages indicating that our ttl
+ * exceeded in transit, therefore, I disabled the options which were used
  * to set the TCP flag and destination port number.
  *
  * NOTE: This piece of code needs CAP_NET_RAW ability to run, to give it the
@@ -188,7 +188,7 @@ int main(int argc, char *argv[])
 
 			/*
 			 * it seems that most routers will not send an ICMP
-			 * message indicating that our ttl is exceeded in
+			 * message indicating that our ttl exceeded in
 			 * transit if we turned on flags other than SYN,
 			 * therefore, we just turn on the SYN flag to get
 			 * better results.
