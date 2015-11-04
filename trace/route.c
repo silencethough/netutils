@@ -124,7 +124,7 @@ uint8_t user_ttl = 1;
 int user_flag = 4;
 
 static void sdpacket(int probe_or_answ);
-static ssize_t rvicmp(void);
+static int rvicmp(void);
 static int rvtcp(void);
 static void tcpheader(int probe_or_answ);
 static int msgflag(struct msghdr *msg);
@@ -667,7 +667,7 @@ void sdpacket(int probe_or_answ)
 	}
 }
 
-ssize_t rvicmp(void)
+int rvicmp(void)
 {
 	struct iphdr pathip, ourip;
 	struct icmphdr icmp;
