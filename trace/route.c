@@ -6,8 +6,8 @@
  * "bad(unlikely)" ports.
  *
  * Even with tcp sockets, if we tried to use a port which the server had not
- * been listening to, the server would not send us a TCP RST reply, and if we
- * turned on a flag other than the SYN flag while setting ttl to "zero",
+ * been listening to, some of the servers would not send us a TCP RST reply, and
+ * if we turned on a flag other than the SYN flag while setting ttl to "zero",
  * according to the experiments(by just simply deleting a few lines in the
  * section which entitled "parsing command line options", maybe I did something
  * wrong)I had done, it seemed that the behaviors of routers would be partially
@@ -194,7 +194,6 @@ int main(int argc, char *argv[])
 			 * better results.
 			 */
 			user_flag = 4;
-
 			break;
 			/* display help */
 		case 'h':
@@ -215,11 +214,11 @@ int main(int argc, char *argv[])
 
 			/*
 			 * sadly, most of the servers today would "NOT"
-			 * send a TCP RST reply if we ever tried to connect to
-			 * the port they were not listening to, therefore, in
-			 * order to get better results, we should set the port
-			 * number to 80, of course, if we want to connect to a
-			 * mail server, we could set the port number to 25.
+			 * send us a TCP RST reply if we ever tried to connect
+			 * to the port they had not been listening to, therefore
+			 * in order to get better results, we should set the
+			 * port number to 80, of course, if we were to connect
+			 * to a mail server, we could set the port number to 25.
 			 */
 			user_port = 80;
 			break;
@@ -593,10 +592,9 @@ void tcpheader(int probe_or_answ)
 	pse_tcp.daddr = dest.sin_addr.s_addr;
 	pse_tcp.protocol = IPPROTO_TCP;
 
-	if (probe_or_answ) {
+	if (probe_or_answ == 1 && user_flag == 4) {
 		tcp.doff = 10;
-		/* turn on sent flag, default flag is SYN */
-		setcpflag(user_flag);
+		tcp.syn = 1;
 		/* windows size is somewhat an arbitrary number */
 		tcp.window = htons(29200);
 		tcp_totlen = (uint16_t)(tcp_hdrlen + tcp_optlen + tcp_datalen);
@@ -620,12 +618,20 @@ void tcpheader(int probe_or_answ)
 
 	} else {
 		/*
-		 * tcp header for answering
-		 * this one is used to tell the target machine that we
-		 * want to reset the connection
+		 * if we got here, it means that we need flags other than SYN
+		 * and the length of tcp option is zero.
+		 *
+		 * the timestamp option is not set here.
 		 */
 		tcp.doff = 5;
-		tcp.rst = 1;
+		if (probe_or_answ == 0) {
+			tcp.rst = 1;
+		} else {
+			/*
+			 * we use other flag other than SYN
+			 */
+			setcpflag(user_flag);
+		}
 		tcp.window = htons(1460);
 		tcp_totlen = (uint16_t)(tcp_hdrlen + tcp_datalen);
 
