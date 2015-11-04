@@ -6,7 +6,7 @@
  * "bad(unlikely)" ports.
  *
  * Even with tcp sockets, if we tried to use a port which the server had not
- * been listening to, the server would not send a TCP RST reply, and if we
+ * been listening to, the server would not send us a TCP RST reply, and if we
  * turned on a flag other than the SYN flag while setting ttl to "zero",
  * according to the experiments(by just simply deleting a few lines in the
  * section which entitled "parsing command line options", maybe I did something
