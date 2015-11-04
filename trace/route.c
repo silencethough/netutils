@@ -437,7 +437,7 @@ int main(int argc, char *argv[])
 				error(fail, errno, "cannot read timer");
 
 			/*
-			 * if we sent 10 tcp packets without an ICMP reply
+			 * if we have sent 10 tcp packets without an ICMP reply
 			 * then, we should quit.
 			 */
 			if (foo > 10) {
