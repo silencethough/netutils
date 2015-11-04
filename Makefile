@@ -1,3 +1,5 @@
+# top level makefile
+
 export src_dir := $(shell pwd)
 export CC := gcc
 export CFLAGS := -std=gnu89 -ggdb -pedantic -O2 -D_FORTIFY_SOURCE=2 -W -Wall \

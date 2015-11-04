@@ -42,7 +42,7 @@ uint8_t r_cntl[CMSG_SPACE(sizeof(struct in_pktinfo)) +\
 int rawfd;
 int user_ttl;
 
-/* count of request without reply */
+/* number of ping requests without reply */
 int foo;
 
 uint8_t ttl;
@@ -418,7 +418,10 @@ int main(int argc, char *argv[])
 			break;
 		}
 
-		/* 5 packets without reply, then we should quit */
+		/*
+		 * If we have sent 5 packets without getting a reply,
+		 * then we should quit.
+		 */
 		if (foo >= 5) {
 			fprintf(stderr, "host unreachable: %s\n", argv[optind]);
 			break;
@@ -565,7 +568,7 @@ void sockopt(void)
 	int s = 0;
 	int on = 1;
 
-	/* must enabled options */
+	/* socket options must be enabled */
 	s = setsockopt(rawfd, IPPROTO_IP, IP_PKTINFO, &on, sizeof(on));
 	if (s != 0)
 		error(fail, errno, "cannot set IP_PKTINFO option");
