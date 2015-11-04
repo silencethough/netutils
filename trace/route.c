@@ -5,11 +5,16 @@
  * seems that some of the firewalls would filter out udp packets with
  * "bad(unlikely)" ports.
  *
- * Even with tcp sockets, if we tried to use a port which the server was not
- * listening to, the server would not send a TCP RST reply, and if we turned on
- * a flag other than SYN flag, the routers would not even send us an ICMP message
- * indicating the our ttl was exceeded in transit, therefore, I disabled the
- * options which were used to set the TCP flag and destination port number.
+ * Even with tcp sockets, if we tried to use a port which the server had not
+ * been listening to, the server would not send a TCP RST reply, and if we
+ * turned on a flag other than the SYN flag while setting ttl to "zero",
+ * according to the experiments(by just simply deleting a few lines in the
+ * section which entitled "parsing command line options", maybe I did something
+ * wrong)I had done, it seemed that the behaviors of routers would be partially
+ * determined by the content of tcp segment(or the tcp flags combined with ttl),
+ * all the routers would not send us any ICMP messages indicating the our ttl
+ * was exceeded in transit, therefore, I disabled the options which were used
+ * to set the TCP flag and destination port number.
  *
  * NOTE: This piece of code needs CAP_NET_RAW ability to run, to give it the
  * appropriate capabilities, just run:
@@ -162,7 +167,7 @@ int main(int argc, char *argv[])
 		error(fail, errno, "unable to open a raw socket");
 
 	/*
-	 * parsing command line options
+	 * "parsing command line options"
 	 * in fact, there is only one available option,
 	 * the initial time to live option.
 	 */
