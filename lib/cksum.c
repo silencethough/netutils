@@ -21,6 +21,7 @@ uint16_t chksum(uint8_t *header, size_t length)
 	if (num == 1)
 		sum += *index;
 
+	/* RFC1071 */
 	while (sum >> 16)
 		sum = (sum & 0xFFFF) + (sum >> 16);
 	sum = ~sum;
