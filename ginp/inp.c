@@ -208,7 +208,7 @@ int main(int argc, char *argv[])
 	if (!gethostbyname(argv[optind]))
 		error(fail, errno, "error: %s", hstrerror(h_errno));
 
-	/* initialize these variables on stack */
+	/* initialize these stack variables */
 	memset(&fdsi, 0, sizeof(struct signalfd_siginfo));
 	memset(&itv, 0, sizeof(struct itimerspec));
 	memset(&tv, 0, sizeof(struct timespec));
