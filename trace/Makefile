@@ -13,7 +13,3 @@ all: second
 
 second: $(objs_trace) $(wildcard $(src_dir)/lib/*.o)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
-
-.PHONY: clean
-clean:
-	rm -rf *.o second

@@ -6,11 +6,17 @@ export CFLAGS := -std=gnu89 -ggdb -pedantic -O2 -D_FORTIFY_SOURCE=2 -W -Wall \
 -Werror -Wextra -Wformat=2 -Wunused -Wmissing-prototypes -Wstrict-prototypes \
 -Wconversion -Wshadow -Wcast-qual -Wwrite-strings -fstack-protector-strong
 
-DIRS = lib ginp trace
+libs := lib
+srcs := ginp trace
+objs = $(wildcard $(src_dir)/*/*.o)
 
-all:
-	@ for dir_list in ${DIRS}; do (cd $${dir_list}; $(MAKE)); done
+SUBDIRS := $(srcs) $(libs)
+.PHONY: clean subdirs $(SUBDIRS)
 
-.PHONY: clean
+subdirs: $(SUBDIRS)
+$(srcs): $(libs)
+$(SUBDIRS):
+	$(MAKE) -C $@
+
 clean:
-	@ for dir_list in ${DIRS}; do (cd $${dir_list}; $(MAKE) clean); done
+	rm -rf $(objs) $(src_dir)/ginp/first $(src_dir)/trace/second

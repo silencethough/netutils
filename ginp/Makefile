@@ -13,7 +13,3 @@ all: first
 
 first: $(objs_ginp) $(wildcard $(src_dir)/lib/*.o)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
-
-.PHONY: clean
-clean:
-	rm -rf *.o first
