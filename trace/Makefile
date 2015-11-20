@@ -9,7 +9,7 @@ LDFLAGS := -lcap
 all: second
 
 %.o: %.c
-	$(CC) $(CFLAGS) $(INCPATH) -c $<
+	$(CC) $(CFLAGS) $(INCPATH) -c $^
 
 second: $(objs_trace) $(wildcard $(src_dir)/lib/*.o)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
