@@ -11,7 +11,7 @@ all: second
 %.o: %.c
 	$(CC) $(CFLAGS) $(INCPATH) -c $<
 
-second: $(objs_trace) $(wildcard $(src_dir)/lib/*.o)
+second: *.o $(src_dir)/lib/*.o
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
 .PHONY: clean
