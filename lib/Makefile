@@ -1,15 +1,10 @@
-cur_dir := $(shell pwd)
-
-srcs_lib := $(wildcard $(cur_dir)/*.c)
-objs_lib := $(srcs_lib:.c=.o)
-
 INCPATH := -I$(src_dir)/include
 
-all: $(objs_lib)
+all: *.o
 
-$(objs_lib): $(srcs_lib)
+%.o: %.c
 	$(CC) $(CFLAGS) $(INCPATH) -c $^
 
 .PHONY: clean
 clean:
-	rm -rf $(objs_lib)
+	rm -rf *.o

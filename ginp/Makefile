@@ -11,9 +11,9 @@ all: first
 %.o: %.c
 	$(CC) $(CFLAGS) $(INCPATH) -c $^
 
-first: *.o $(src_dir)/lib/*.o
+first: $(objs_ginp) $(wildcard $(src_dir)/lib/*.o)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
 .PHONY: clean
 clean:
-	rm -rf $(objs_ginp) first
+	rm -rf *.o first
