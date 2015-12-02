@@ -11,11 +11,10 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/uio.h>
-#include <sys/select.h>
-#include <sys/capability.h>
 #include <sys/signalfd.h>
 #include <sys/timerfd.h>
 #include <sys/time.h>
+#include <poll.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <netinet/ip.h>
@@ -23,7 +22,6 @@
 #include <netinet/in.h>
 #include <signal.h>
 #include <getopt.h>
-#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -71,7 +69,7 @@ const struct option long_options[] = {
 	{"interval", required_argument, NULL, 'i'},
 	{"pattern", required_argument, NULL, 'p'},
 	{"packetsize", required_argument, NULL, 's'},
-	{"timetolive", required_argument, NULL, 't'},
+	{"ttl", required_argument, NULL, 't'},
 	{NULL, 0, NULL, 0}
 };
 const char *optstring = ":c:hi:p:s:t:";
@@ -86,19 +84,19 @@ int main(int argc, char *argv[])
 {
 	struct itimerspec itv;
 	struct signalfd_siginfo fdsi;
-	struct timespec tv;
 	struct timeval arrive;
+	struct timespec timeout;
 	struct sockaddr_in target;
 	struct in_addr bar;
 	struct addrinfo hints, *res, *rp;
 	struct iovec s_iov, r_iov;
+	struct pollfd monitored[3];
 	sigset_t mask;
-	fd_set rdsets;
-	int sfd = 0, sigfd = 0, timfd = 0, maxfd = 0;
-	int s = 0, ch = 0;
+	int sfd = 0, sigfd = 0, timfd = 0;
+	int s = 0, ch = 0, temp = 0, i = 0;
 	int frequency = 2;
-	int temp = 0;
-	size_t i = icmplen + valen;
+	nfds_t nfds = 3;
+	size_t len = icmplen + valen;
 	uint32_t count = 0;
 	ssize_t rvnum = 0, tinum = 0, itnum = 0;
 	long rrt;
@@ -208,15 +206,19 @@ int main(int argc, char *argv[])
 	if (!gethostbyname(argv[optind]))
 		error(fail, errno, "error: %s", hstrerror(h_errno));
 
-	/* initialize these stack variables */
 	memset(&fdsi, 0, sizeof(struct signalfd_siginfo));
 	memset(&itv, 0, sizeof(struct itimerspec));
-	memset(&tv, 0, sizeof(struct timespec));
+	memset(&timeout, 0, sizeof(struct timespec));
 	memset(&arrive, 0, sizeof(struct timeval));
 	memset(&target, 0, sizeof(struct sockaddr_in));
 	memset(peername, 0, sizeof(peername));
 	memset(&s_iov, 0, sizeof(struct iovec));
 	memset(&r_iov, 0, sizeof(struct iovec));
+
+	for (i = 0; i < 3; i++) {
+		memset(&monitored[i], 0, sizeof(struct pollfd));
+		monitored[i].events = POLLIN;
+	}
 
 	/* setup signal(SIGINT) mask */
 	s = sigemptyset(&mask);
@@ -297,8 +299,8 @@ int main(int argc, char *argv[])
 
 	/* fill packet with the pattern (8 == sizeof(pattern)) */
 	if (pattern) {
-		for (; i < icmplen + valen + extra - 8; i += 8)
-			memcpy(s_buff + i, &pattern, 8);
+		for (; len < icmplen + valen + extra - 8; len += 8)
+			memcpy(s_buff + len, &pattern, 8);
 	}
 
 	s_cmsg = (struct cmsghdr *)s_cntl;
@@ -338,23 +340,26 @@ int main(int argc, char *argv[])
 	if (s != 0)
 		error(fail, errno, "timerfd_setime");
 
-	/* arguments needed by pselect */
-	tv.tv_sec = 5;
-	maxfd = (timfd > sigfd) ? timfd : sigfd;
-	maxfd = (maxfd > rawfd) ? maxfd : rawfd;
+	/* file descriptors to monitor */
+	monitored[0].fd = rawfd;
+	monitored[1].fd = timfd;
+	monitored[2].fd = sigfd;
+
+	/* timeout for ppoll */
+	timeout.tv_nsec = 0;
+	timeout.tv_sec = 2;
+
 	/* the loop */
 	for (;;) {
-		FD_ZERO(&rdsets);
-		FD_SET(rawfd, &rdsets);
-		FD_SET(sigfd, &rdsets);
-		FD_SET(timfd, &rdsets);
-
-		s = pselect(maxfd + 1, &rdsets, NULL, NULL, &tv, NULL);
+		s = ppoll(monitored, nfds, &timeout, NULL);
 		if (s == -1) {
-			error(fail, errno, "pselect");
+			error(fail, errno, "poll");
 		}
 
-		if (FD_ISSET(rawfd, &rdsets)) {
+		if (s == 0)
+			continue;
+
+		if (monitored[0].revents == POLLIN) {
 			rvnum = rvpacket();
 			if (rvnum == 0) {
 				continue;
@@ -393,9 +398,11 @@ int main(int argc, char *argv[])
 				if (count == transferred)
 					break;
 			}
+
+			monitored[0].revents = 0;
 		}
 
-		if (FD_ISSET(timfd, &rdsets)) {
+		if (monitored[1].revents == POLLIN) {
 			tinum = read(timfd, &occured, sizeof(uint64_t));
 			if (tinum != sizeof(uint64_t))
 				error(fail, errno, "cannot read timer");
@@ -409,13 +416,17 @@ int main(int argc, char *argv[])
 
 			foo++;
 			transferred++;
+
+			monitored[1].revents = 0;
 		}
 
-		if (FD_ISSET(sigfd, &rdsets)) {
+		if (monitored[2].revents == POLLIN) {
 			itnum = read(sigfd,&fdsi,sizeof(struct signalfd_siginfo));
 			if (itnum != sizeof(struct signalfd_siginfo))
 				error(fail, errno, "cannot read SIGINT");
 			break;
+
+			monitored[2].revents = 0;
 		}
 
 		/*
@@ -600,8 +611,7 @@ void usage(void)
 		"-c, --count number of packets to send, maximum number is 20\n"
 		"-h, --help show help\n"
 		"-i --interval the frequency of sending packets\n"
-		"-p --pattern the patterns appending to the packet, must\
-		be a valid unsigned long hex number\n"
+		"-p --pattern which must be a valid unsigned long hex number\n"
 		"-s --packetsize extra bytes to send\n"
-		"-t --timetolive ttl of the packet\n");
+		"-t --ttl ttl of the packet\n");
 }
