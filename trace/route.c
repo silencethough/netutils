@@ -91,7 +91,7 @@ uint16_t our_pid;
 /* length of struct sockaddr_in */
 socklen_t in_len = sizeof(struct sockaddr_in);
 
-/* we create two raw sockets */
+/* we need two raw sockets */
 int probefd, icmpfd;
 
 /* if "answ(0)", then we set the RST flag, else, we set the SYN flag */
@@ -407,7 +407,7 @@ int main(int argc, char *argv[])
 
 	/* event poll setup */
 	timeout = 2;
-	
+
 	epollfd = epoll_create1(0);
 	if (epollfd == -1)
 		error(fail, errno, "epoll_create1");
