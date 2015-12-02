@@ -31,7 +31,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/uio.h>
-#include <sys/capability.h>
+#include <sys/epoll.h>
 #include <sys/signalfd.h>
 #include <sys/timerfd.h>
 #include <arpa/inet.h>
@@ -42,7 +42,6 @@
 #include <signal.h>
 #include <time.h>
 #include <getopt.h>
-#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -146,15 +145,15 @@ int main(int argc, char *argv[])
 	struct itimerspec itv;
 	struct timespec tv;
 	struct signalfd_siginfo fdsi;
+	struct epoll_event monitored[4], events[4];
 	struct in_addr bar;
 	sigset_t mask;
-	fd_set rdsets;
 	uint64_t occured;
 	ssize_t num_bytes = 0;
-	int sfd = 0, sigfd = 0, timfd = 0, maxfd = 0;
-	int s = 0, j;
-	int ch = 0, temp = 0;
-	int foo = 0;
+	int sfd = 0, sigfd = 0, timfd = 0, epollfd = -1;
+	int maxevents = 4;
+	int timeout;
+	int s = 0, i = 0, ch = 0, temp = 0, foo = 0;
 	void *s_cdata;
 
 	/* the two raw sockets, probefd, icmpfd */
@@ -269,6 +268,14 @@ int main(int argc, char *argv[])
 
 	allfds[0] = probefd;
 	allfds[1] = icmpfd;
+
+	for (i = 0; i < 4; i++) {
+		/* fourth argument in epoll_ctl */
+		memset(&monitored[i], 0, sizeof(struct epoll_event));
+
+		/* second argument in epoll_wait */
+		memset(&events[i], 0, sizeof(struct epoll_event));
+	}
 
 	/* setup signal(SIGINT) mask, (other signals may be added)  */
 	s = sigemptyset(&mask);
@@ -395,85 +402,105 @@ int main(int argc, char *argv[])
 
 	allfds[3] = timfd;
 
-	/* find the maximum value of all file descriptors */
-	for (j = 0; j < 4; j++)
-		if (allfds[j] > maxfd)
-			maxfd = allfds[j];
-
 	/* timeout for pselect */
 	tv.tv_sec = 2;
 
+	/* event poll setup */
+	timeout = 2;
+	
+	epollfd = epoll_create1(0);
+	if (epollfd == -1)
+		error(fail, errno, "epoll_create1");
+
+	for (i = 0; i < 4; i++) {
+		monitored[i].events = EPOLLIN;
+		monitored[i].data.fd = allfds[i];
+
+		errno = 0;
+		s = epoll_ctl(epollfd, EPOLL_CTL_ADD, allfds[i], &monitored[i]);
+		if (s != 0)
+			error(fail, errno, "epoll_ctl i is %d", i);
+	}
+
 	/* the loop */
 	for (;;) {
-		FD_ZERO(&rdsets);
-		for (j = 0; j < 4; j++)
-			FD_SET(allfds[j], &rdsets);
+		s = epoll_pwait(epollfd, events, maxevents, timeout, NULL);
+		if (s == -1)
+			error(fail, errno, "epoll_pwait");
 
-		s = pselect(maxfd + 1, &rdsets, NULL, NULL, &tv, NULL);
-		if (s == -1) {
-			error(fail, errno, "pselect");
-		}
+		if (s == 0)
+			continue;
 
-		if (FD_ISSET(probefd, &rdsets)) {
-			if (rvtcp() == 0) {
+		for (i = 0; i < 4; i++) {
+			if (events[i].data.fd == probefd) {
+				if (rvtcp() == 0) {
+					/*
+					 * "turn on the RST flag"
+					 * it seems that we don't need to send
+					 * a RST flag to our target, the kernel
+					 * will automatically send a RST flag
+					 * when we receive a packet with
+					 * "ACK + SYN" flag turned on.
+					 */
+					sdpacket(answ);
+					clean_up();
+
+					/* break the outer loop */
+					goto out_loop;
+				}
+			}
+
+			if (events[i].data.fd == timfd) {
+				/* read the timerfd */
+				num_bytes = read(timfd, &occured,
+						 sizeof(uint64_t));
+				if (num_bytes != sizeof(uint64_t))
+					error(fail, errno, "cannot read timer");
+
 				/*
-				 * "turn on the RST flag"
-				 * it seems that we don't need to send a RST
-				 * flag to our target, the kernel will
-				 * automatically send a RST flag
-				 * when we receive
-				 * a packet with "ACK + SYN" flag turned on.
+				 * if we have sent 10 tcp packets without an
+				 * icmp reply, then, we should quit.
 				 */
-				sdpacket(answ);
-				clean_up();
-				break;
+				if (foo > 10) {
+					clean_up();
+					printf("%d packets sent without reply\n",
+					       foo);
+					exit(EXIT_FAILURE);
+				} else {
+					/* turn on the syn flag */
+					sdpacket(probe);
+					num_router++;
+					foo++;
+				}
 			}
-		}
 
-		if (FD_ISSET(timfd, &rdsets)) {
-			/* read the timerfd */
-			num_bytes = read(timfd, &occured, sizeof(uint64_t));
-			if (num_bytes != sizeof(uint64_t))
-				error(fail, errno, "cannot read timer");
+			if (events[i].data.fd == icmpfd) {
+				if (rvicmp() == 1) {
+					/* break the inner loop */
+					break;
+				} else {
+					foo--;
+				}
 
-			/*
-			 * if we have sent 10 tcp packets without an ICMP reply
-			 * then, we should quit.
-			 */
-			if (foo > 10) {
+			}
+
+			if (events[i].data.fd == sigfd) {
+				/* read the signalfd */
+				num_bytes = read(sigfd, &fdsi,
+						 sizeof(struct signalfd_siginfo));
+
+				if (num_bytes != sizeof(struct signalfd_siginfo))
+					error(fail, errno, "cannot read SIGINT");
+
+				printf("\n\n");
 				clean_up();
-				printf("%d packets sent without reply\n", foo);
 				exit(EXIT_FAILURE);
-			} else {
-				/* turn on the SYN flag */
-				sdpacket(probe);
-				num_router++;
-				foo++;
+
 			}
-		}
-
-		if (FD_ISSET(icmpfd, &rdsets)) {
-			if (rvicmp() == 1) {
-				continue;
-			} else {
-				foo--;
-			}
-		}
-
-		if (FD_ISSET(sigfd, &rdsets)) {
-			/* read the signalfd */
-			num_bytes = read(sigfd, &fdsi,
-					 sizeof(struct signalfd_siginfo));
-
-			if (num_bytes != sizeof(struct signalfd_siginfo))
-				error(fail, errno, "cannot read SIGINT");
-
-			printf("\n\n");
-			clean_up();
-			exit(EXIT_FAILURE);
 		}
 	}
 
+out_loop:
 	return 0;
 }
 
@@ -763,7 +790,7 @@ got_it:
 	if(!inet_ntop(AF_INET, &hop.s_addr, hopname, sizeof(hopname)))
 		error(fail, errno, "inet_ntop");
 
-	printf("%d: %s\n", num_router, hopname);
+	printf("%d:\t%s\n", num_router, hopname);
 	/* if we came to here, then we did not get the time exceeded reply */
 	return 0;
 }
@@ -813,6 +840,11 @@ int rvtcp(void)
 	}
 
 final:
+	peer.s_addr = peerip.saddr;
+	if (!inet_ntop(AF_INET, &peer, peername, sizeof(peername)))
+		error(fail, errno, "inet_ntop");
+	printf("%d:\t%s\n", num_router, peername);
+
 	printf("\n");
 	if (peertcp.ack) {
 		printf("ACK flag is on\n");
@@ -839,10 +871,6 @@ final:
 		printf("URG flag is on\n");
 	}
 
-	peer.s_addr = peerip.saddr;
-	if (!inet_ntop(AF_INET, &peer, peername, sizeof(peername)))
-		error(fail, errno, "inet_ntop");
-	printf("%d: %s\n", num_router, peername);
 	/* we got the reply from the target */
 	return 0;
 }
