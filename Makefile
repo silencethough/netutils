@@ -2,7 +2,7 @@
 
 export src_dir := $(shell pwd)
 export CC := gcc
-export CFLAGS := -ggdb -O2 -D_FORTIFY_SOURCE=2 -W -Wall -Werror \
+export CFLAGS := -O2 -D_FORTIFY_SOURCE=2 -W -Wall -Werror \
 -Wextra -Wformat=2 -Wunused -Wmissing-prototypes -Wstrict-prototypes \
 -Wconversion -Wshadow -Wcast-qual -Wwrite-strings -fstack-protector-strong
 
