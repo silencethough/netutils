@@ -1,6 +1,6 @@
 # top level makefile
 
-export src_dir := $(shell pwd)
+export src_dir := $(CURDIR)
 export CC := gcc
 export CFLAGS := -O2 -D_FORTIFY_SOURCE=2 -W -Wall -Werror \
 -Wextra -Wformat=2 -Wunused -Wmissing-prototypes -Wstrict-prototypes \

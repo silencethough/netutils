@@ -1,6 +1,4 @@
-cur_dir := $(shell pwd)
-
-srcs_trace := $(wildcard $(cur_dir)/*.c)
+srcs_trace := $(wildcard $(CURDIR)/*.c)
 objs_trace := $(srcs_trace:.c=.o)
 
 INCPATH := -I$(src_dir)/include
