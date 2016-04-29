@@ -8,11 +8,11 @@
  * in file "include/net/tcp.h"
  */
 struct pseudo_tcphdr {
-	uint32_t saddr;
-	uint32_t daddr;
-	uint8_t pad;
-	uint8_t protocol;
-	uint16_t len;
+        uint32_t saddr;
+        uint32_t daddr;
+        uint8_t pad;
+        uint8_t protocol;
+        uint16_t len;
 };
 
-#endif	/* tcp_pseudo_hdr.h */
+#endif  /* tcp_pseudo_hdr.h */
