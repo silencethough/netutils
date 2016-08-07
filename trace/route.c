@@ -25,7 +25,7 @@
  *           # exit
  *           $ ./name_of_this_file target
  *
- * I've tested this program on Debian 8.4.
+ * I've tested this program on Debian 8.5.
  */
 #include <unistd.h>
 #include <sys/types.h>
