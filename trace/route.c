@@ -3,7 +3,7 @@
  *
  * The reason that we don't use udp socket to detect the routers is that it
  * seems that some of the firewalls would filter out udp packets with
- * "bad(unlikely)" ports(in some networks, this is true).
+ * "bad(unlikely)" ports.
  *
  * Even with tcp sockets, if we tried to connect to a port which the server had
  * not been listening to, some of the servers would not send us a TCP RST reply,
