@@ -17,7 +17,7 @@
  * to set the TCP flag and destination port number.
  *
  * NOTE: This piece of code needs CAP_NET_RAW ability to run, to give it the
- * appropriate capabilities, just run:
+ * appropriate capabilities, simply run:
  *           $ cd directory_of_this_file
  *           $ su
  *           # *********(enter your password)
