@@ -1,22 +1,22 @@
-# top level makefile
+CFLAGS := -O2 -Wall -W -Wextra -Wunused  -Wmissing-prototypes -Wstrict-prototypes
+CC := gcc
+LDFLAGS := -lcap
+INCLUDEPATH := -I.
+DEPFLAG := -MMD
 
-export src_dir := $(CURDIR)
-export CC := gcc
-export CFLAGS := -O2 -D_FORTIFY_SOURCE=2 -W -Wall -Werror \
--Wextra -Wformat=2 -Wunused -Wmissing-prototypes -Wstrict-prototypes \
--Wconversion -Wshadow -Wcast-qual -Wwrite-strings -fstack-protector-strong
+objs := $(patsubst %.c,%.o,$(wildcard *.c))
+deps := $(patsubst %.c,%.d,$(wildcard *.c))
 
-libs := lib
-srcs := ginp trace
-objs = $(wildcard $(src_dir)/*/*.o)
+all: myping mytrace
+-include $(deps)
 
-SUBDIRS := $(srcs) $(libs)
-.PHONY: clean subdirs $(SUBDIRS)
+%.o: %.c
+	$(CC) $(INCLUDEPATH) $(DEPFLAG) $(CFLAGS) -c $< -o $@
+myping: inp.o cap.o cksum.o
+	$(CC) $^ -o $@ $(LDFLAGS)
+mytrace: route.o cap.o cksum.o
+	$(CC) $^ -o $@ $(LDFLAGS)
 
-subdirs: $(SUBDIRS)
-$(srcs): $(libs)
-$(SUBDIRS):
-	$(MAKE) -C $@
-
+.PHONE: clean
 clean:
-	rm -rf $(objs) $(src_dir)/ginp/first $(src_dir)/trace/second
+	rm -f $(objs) $(deps) myping mytrace
