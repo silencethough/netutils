@@ -17,6 +17,6 @@ myping: inp.o cap.o cksum.o
 mytrace: route.o cap.o cksum.o
 	$(CC) $^ -o $@ $(LDFLAGS)
 
-.PHONE: clean
+.PHONY: clean
 clean:
 	rm -f $(objs) $(deps) myping mytrace
